@@ -49,3 +49,40 @@ export interface WPPage extends Omit<WPPost, 'categories' | 'tags' | 'format' | 
   parent: number;
   menu_order: number;
 }
+
+export interface WCImage {
+  id: number;
+  src: string;
+  name: string;
+  alt: string;
+}
+
+export interface WCCategory {
+  id: number;
+  name: string;
+  slug: string;
+}
+
+export interface WCProduct {
+  id: number;
+  name: string;
+  slug: string;
+  permalink: string;
+  date_created: string;
+  type: 'simple' | 'variable' | 'grouped' | 'external';
+  status: 'draft' | 'pending' | 'private' | 'publish';
+  featured: boolean;
+  catalog_visibility: 'visible' | 'catalog' | 'search' | 'hidden';
+  description: string;
+  short_description: string;
+  sku: string;
+  price: string;
+  regular_price: string;
+  sale_price: string;
+  manage_stock: boolean;
+  stock_quantity: number | null;
+  stock_status: 'instock' | 'outofstock' | 'onbackorder';
+  categories: WCCategory[];
+  tags: any[];
+  images: WCImage[];
+}

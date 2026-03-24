@@ -2,6 +2,17 @@ import { fetch } from '@tauri-apps/plugin-http';
 import { useStore } from './store';
 import { SiteCredential } from '../types/wordpress';
 
+export class ApiError extends Error {
+  status: number;
+  data: any;
+  constructor(message: string, status: number, data?: any) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.data = data;
+  }
+}
+
 class ApiService {
   private async getTargetSite(targetConfig?: string | SiteCredential): Promise<SiteCredential> {
     if (typeof targetConfig === 'object') {
@@ -49,7 +60,7 @@ class ApiService {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || `API Error: ${response.status}`);
+      throw new ApiError(errorData.message || `API Error: ${response.status}`, response.status, errorData);
     }
 
     return response.json();
@@ -76,7 +87,7 @@ class ApiService {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || `Media Upload Error: ${response.status}`);
+      throw new ApiError(errorData.message || `Media Upload Error: ${response.status}`, response.status, errorData);
     }
 
     return response.json();

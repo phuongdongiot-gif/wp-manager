@@ -14,17 +14,31 @@ export const createPost = async (
   categories?: number[],
   targetConfig?: string | SiteCredential
 ): Promise<WPPost> => {
-  return await api.request<WPPost>('/wp-json/wp/v2/posts', {
-    method: 'POST',
-    body: JSON.stringify({
-      title,
-      content,
-      status,
-      ...(featured_media ? { featured_media } : {}),
-      ...(meta ? { meta } : {}),
-      ...(categories && categories.length > 0 ? { categories } : {})
-    })
-  }, targetConfig);
+  const payload: any = {
+    title,
+    content,
+    status,
+    ...(featured_media ? { featured_media } : {}),
+    ...(meta ? { meta } : {}),
+    ...(categories && categories.length > 0 ? { categories } : {})
+  };
+
+  try {
+    return await api.request<WPPost>('/wp-json/wp/v2/posts', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    }, targetConfig);
+  } catch (error: any) {
+    if (error.status === 400 && meta) {
+      console.warn('RankMath API missing, retrying without meta...');
+      delete payload.meta;
+      return await api.request<WPPost>('/wp-json/wp/v2/posts', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      }, targetConfig);
+    }
+    throw error;
+  }
 };
 
 export const updatePost = async (
@@ -37,17 +51,31 @@ export const updatePost = async (
   categories?: number[],
   targetConfig?: string | SiteCredential
 ): Promise<WPPost> => {
-  return await api.request<WPPost>(`/wp-json/wp/v2/posts/${id}`, {
-    method: 'POST', // WP REST API handles POST for updating
-    body: JSON.stringify({
-      title,
-      content,
-      status,
-      ...(featured_media ? { featured_media } : {}),
-      ...(meta ? { meta } : {}),
-      ...(categories && categories.length > 0 ? { categories } : {})
-    })
-  }, targetConfig);
+  const payload: any = {
+    title,
+    content,
+    status,
+    ...(featured_media ? { featured_media } : {}),
+    ...(meta ? { meta } : {}),
+    ...(categories && categories.length > 0 ? { categories } : {})
+  };
+
+  try {
+    return await api.request<WPPost>(`/wp-json/wp/v2/posts/${id}`, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    }, targetConfig);
+  } catch (error: any) {
+    if (error.status === 400 && meta) {
+      console.warn('RankMath API missing, retrying without meta...');
+      delete payload.meta;
+      return await api.request<WPPost>(`/wp-json/wp/v2/posts/${id}`, {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      }, targetConfig);
+    }
+    throw error;
+  }
 };
 
 export const deletePost = async (id: number, siteId?: string): Promise<boolean> => {
