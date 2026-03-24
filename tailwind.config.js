@@ -45,6 +45,20 @@ export default {
           foreground: "hsl(var(--card-foreground))",
         },
       },
+      keyframes: {
+        "fade-in-up": {
+          "0%": { opacity: "0", transform: "translateY(15px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        "splash-line": {
+          "0%": { transform: "scaleX(0)" },
+          "100%": { transform: "scaleX(1)" },
+        }
+      },
+      animation: {
+        "fade-in-up": "fade-in-up 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards",
+        "splash-line": "splash-line 1.5s cubic-bezier(0.65, 0, 0.35, 1) forwards",
+      }
     },
   },
   plugins: [],

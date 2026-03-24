@@ -41,7 +41,7 @@ export const LoginView: React.FC = () => {
   return (
     <div className="flex items-center justify-center min-h-screen bg-[#FAFAFA] dark:bg-[#050505] p-4 relative selection:bg-primary/30">
       {sites.length > 0 && (
-        <Link to="/" className="absolute top-8 left-8 flex items-center text-xs uppercase tracking-[0.1em] text-gray-500 hover:text-primary transition-colors z-10">
+        <Link to="/" className="absolute top-8 left-8 flex items-center text-xs uppercase tracking-wider text-gray-500 hover:text-primary transition-colors z-10">
           <ArrowLeft className="w-4 h-4 mr-3" strokeWidth={1.5} /> Bảng thống kê
         </Link>
       )}
@@ -49,10 +49,10 @@ export const LoginView: React.FC = () => {
       <div className="w-full max-w-lg bg-white dark:bg-[#0A0A0A] rounded-none p-12 border border-gray-200 dark:border-white/5 shadow-2xl z-10 relative">
         <div className="absolute top-0 left-0 w-full h-[2px] bg-primary"></div>
         <div className="text-center mb-12">
-          <h1 className="text-3xl font-serif text-gray-900 dark:text-white mb-4 tracking-[0.1em] uppercase">
+          <h1 className="text-3xl font-serif text-gray-900 dark:text-white mb-4 tracking-wider uppercase">
             Thêm Website
           </h1>
-          <p className="text-gray-500 dark:text-gray-400 text-xs uppercase tracking-[0.15em] font-medium leading-relaxed">
+          <p className="text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wider font-bold leading-relaxed">
             Kết nối quản trị viên qua<br/>Application Passwords
           </p>
         </div>
@@ -67,7 +67,7 @@ export const LoginView: React.FC = () => {
               onChange={(e) => setUrl(e.target.value)}
               required
             />
-            <label className="absolute left-0 top-5 text-gray-400 dark:text-gray-500 text-sm peer-focus:text-xs peer-focus:-translate-y-6 peer-focus:text-primary peer-valid:text-xs peer-valid:-translate-y-6 transition-all duration-300 pointer-events-none uppercase tracking-[0.1em]">
+            <label className="absolute left-0 top-5 text-gray-400 dark:text-gray-500 text-sm peer-focus:text-xs peer-focus:-translate-y-6 peer-focus:text-primary peer-valid:text-xs peer-valid:-translate-y-6 transition-all duration-300 pointer-events-none uppercase tracking-wider">
               Đường dẫn Website (URL)
             </label>
             <div className="absolute bottom-0 left-0 w-0 h-[1px] bg-primary transition-all duration-500 group-focus-within:w-full"></div>
@@ -82,7 +82,7 @@ export const LoginView: React.FC = () => {
               onChange={(e) => setUsername(e.target.value)}
               required
             />
-            <label className="absolute left-0 top-5 text-gray-400 dark:text-gray-500 text-sm peer-focus:text-xs peer-focus:-translate-y-6 peer-focus:text-primary peer-valid:text-xs peer-valid:-translate-y-6 transition-all duration-300 pointer-events-none uppercase tracking-[0.1em]">
+            <label className="absolute left-0 top-5 text-gray-400 dark:text-gray-500 text-sm peer-focus:text-xs peer-focus:-translate-y-6 peer-focus:text-primary peer-valid:text-xs peer-valid:-translate-y-6 transition-all duration-300 pointer-events-none uppercase tracking-wider">
               Tài khoản quản trị
             </label>
             <div className="absolute bottom-0 left-0 w-0 h-[1px] bg-primary transition-all duration-500 group-focus-within:w-full"></div>
@@ -97,7 +97,7 @@ export const LoginView: React.FC = () => {
               onChange={(e) => setPassword(e.target.value)}
               required
             />
-            <label className="absolute left-0 top-5 text-gray-400 dark:text-gray-500 text-sm peer-focus:text-xs peer-focus:-translate-y-6 peer-focus:text-primary peer-valid:text-xs peer-valid:-translate-y-6 transition-all duration-300 pointer-events-none uppercase tracking-[0.1em]">
+            <label className="absolute left-0 top-5 text-gray-400 dark:text-gray-500 text-sm peer-focus:text-xs peer-focus:-translate-y-6 peer-focus:text-primary peer-valid:text-xs peer-valid:-translate-y-6 transition-all duration-300 pointer-events-none uppercase tracking-wider">
               Mật khẩu ứng dụng
             </label>
             <div className="absolute bottom-0 left-0 w-0 h-[1px] bg-primary transition-all duration-500 group-focus-within:w-full"></div>
@@ -106,7 +106,7 @@ export const LoginView: React.FC = () => {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full flex justify-center items-center px-4 py-4 mt-8 bg-primary hover:bg-gray-900 dark:hover:bg-white text-white dark:hover:text-black font-semibold uppercase tracking-[0.2em] text-xs rounded-none transition-all duration-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full flex justify-center items-center px-4 py-4 mt-8 bg-primary hover:bg-gray-900 dark:hover:bg-white text-white dark:hover:text-black font-bold uppercase tracking-wider text-xs rounded-none transition-all duration-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSubmitting ? (
               <>

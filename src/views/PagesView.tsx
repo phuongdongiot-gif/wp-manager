@@ -180,12 +180,12 @@ export const PagesView: React.FC = () => {
       <div className="flex justify-between items-end mb-12 pb-6 border-b border-gray-200 dark:border-white/10">
         <div>
           <h2 className="text-4xl font-serif text-gray-900 dark:text-white tracking-[0.05em] uppercase">Quản lý Trang</h2>
-          <p className="text-xs tracking-[0.1em] uppercase text-gray-500 dark:text-gray-400 mt-3 inline-block">Thiết lập nội dung tĩnh</p>
+          <p className="text-xs tracking-wider uppercase text-gray-500 dark:text-gray-400 mt-3 inline-block">Thiết lập nội dung tĩnh</p>
         </div>
         {!showForm && (
           <button 
             onClick={openCreateForm}
-            className="flex items-center px-6 py-3 bg-primary text-black hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all duration-500 font-semibold uppercase tracking-[0.1em] text-[10px] rounded-none border border-primary"
+            className="flex items-center px-6 py-3 bg-primary text-black hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all duration-500 font-bold uppercase tracking-wider text-xs rounded-none border border-primary"
           >
             <Plus className="w-4 h-4 mr-2" strokeWidth={1.5} /> Thêm Trang Mới
           </button>
@@ -196,10 +196,10 @@ export const PagesView: React.FC = () => {
         <div className="bg-white dark:bg-[#0A0A0A] rounded-none shadow-2xl border border-gray-200 dark:border-white/5 p-10 mb-12 transition-all relative">
           <div className="absolute top-0 left-0 w-full h-[2px] bg-primary"></div>
           <div className="flex justify-between items-center mb-10 pb-6 border-b border-gray-100 dark:border-white/5">
-            <h3 className="text-2xl font-serif text-gray-900 dark:text-white tracking-[0.1em] uppercase">
+            <h3 className="text-2xl font-serif text-gray-900 dark:text-white tracking-wider uppercase">
               {editingId ? 'Chỉnh sửa Trang' : 'Tạo Trang Mới'}
             </h3>
-            <button type="button" onClick={closeForm} className="text-[10px] uppercase tracking-[0.15em] font-medium text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors underline underline-offset-4 decoration-transparent hover:decoration-gray-500">Huỷ bỏ</button>
+            <button type="button" onClick={closeForm} className="text-xs uppercase tracking-wider font-bold text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors underline underline-offset-4 decoration-transparent hover:decoration-gray-500">Huỷ bỏ</button>
           </div>
           <form onSubmit={handleSubmit} className="space-y-10">
             <div className="relative group">
@@ -211,11 +211,11 @@ export const PagesView: React.FC = () => {
                 className="w-full px-0 pt-6 pb-2 border-b border-gray-300 dark:border-white/10 bg-transparent text-gray-900 dark:text-white text-lg focus:border-primary outline-none transition-colors peer" 
                 placeholder=" " 
               />
-              <label className="absolute left-0 top-6 text-gray-400 dark:text-gray-500 text-sm peer-focus:text-xs peer-focus:-translate-y-7 peer-focus:text-primary peer-valid:text-xs peer-valid:-translate-y-7 transition-all duration-300 pointer-events-none uppercase tracking-[0.1em]">Tiêu đề Trang</label>
+              <label className="absolute left-0 top-6 text-gray-400 dark:text-gray-500 text-sm peer-focus:text-xs peer-focus:-translate-y-7 peer-focus:text-primary peer-valid:text-xs peer-valid:-translate-y-7 transition-all duration-300 pointer-events-none uppercase tracking-wider">Tiêu đề Trang</label>
               <div className="absolute bottom-0 left-0 w-0 h-[1px] bg-primary transition-all duration-500 group-focus-within:w-full"></div>
             </div>
             <div>
-              <label className="block text-[10px] font-medium uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 mb-4">Nội dung Trang</label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-4">Nội dung Trang</label>
               <textarea 
                 rows={12}
                 value={newContent}
@@ -228,21 +228,21 @@ export const PagesView: React.FC = () => {
             {/* Multi-Publish Feature Toggle */}
             <div className="pt-8 pb-4 border-t border-gray-100 dark:border-white/10 space-y-6">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <label className="text-[10px] font-medium uppercase tracking-[0.2em] text-gray-500 flex items-center">
+                <label className="text-xs font-bold uppercase tracking-wider text-gray-500 flex items-center">
                   <Globe className="w-4 h-4 mr-3" strokeWidth={1.5} /> Đăng Đa Nền Tảng
                 </label>
                 <div className="flex items-center space-x-6">
                   <button 
                     type="button"
                     onClick={() => setPushMode('saved')}
-                    className={`text-[10px] uppercase tracking-[0.1em] font-bold pb-2 border-b-2 transition-colors ${pushMode === 'saved' ? 'text-primary border-primary' : 'text-gray-400 border-transparent hover:text-gray-300'}`}
+                    className={`text-xs uppercase tracking-wider font-bold pb-2 border-b-2 transition-colors ${pushMode === 'saved' ? 'text-primary border-primary' : 'text-gray-400 border-transparent hover:text-gray-300'}`}
                   >
                     Site Đã Lưu
                   </button>
                   <button 
                     type="button"
                     onClick={() => setPushMode('quick')}
-                    className={`text-[10px] uppercase tracking-[0.1em] font-bold pb-2 border-b-2 transition-colors ${pushMode === 'quick' ? 'text-primary border-primary' : 'text-gray-400 border-transparent hover:text-gray-300'}`}
+                    className={`text-xs uppercase tracking-wider font-bold pb-2 border-b-2 transition-colors ${pushMode === 'quick' ? 'text-primary border-primary' : 'text-gray-400 border-transparent hover:text-gray-300'}`}
                   >
                     Đăng Nhanh
                   </button>
@@ -252,7 +252,7 @@ export const PagesView: React.FC = () => {
               {pushMode === 'saved' ? (
                 sites.length > 0 ? (
                   <div className="bg-[#FAF9F6] dark:bg-transparent p-6 rounded-none border border-gray-200 dark:border-white/10">
-                    <div className="text-[10px] uppercase tracking-[0.1em] text-gray-500 dark:text-gray-400 mb-6 font-medium">Chọn hệ thống phân phối:</div>
+                    <div className="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-6 font-bold">Chọn hệ thống phân phối:</div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                       {sites.map(site => (
                         <label key={site.id} className={`flex items-center space-x-4 p-4 rounded-none border cursor-pointer transition-all duration-300 ${
@@ -264,18 +264,18 @@ export const PagesView: React.FC = () => {
                             checked={targetSiteIds.includes(site.id)}
                             onChange={() => toggleSiteTarget(site.id)}
                           />
-                          <span className="text-xs font-medium tracking-wide truncate" title={site.url}>{site.siteName && site.siteName !== site.username && site.siteName !== 'New Site' ? site.siteName : site.url.replace(/^https?:\/\//, '').replace(/\/$/, '')}</span>
+                          <span className="text-xs font-bold tracking-wide truncate" title={site.url}>{site.siteName && site.siteName !== site.username && site.siteName !== 'New Site' ? site.siteName : site.url.replace(/^https?:\/\//, '').replace(/\/$/, '')}</span>
                         </label>
                       ))}
                     </div>
                   </div>
                 ) : (
-                  <div className="text-[10px] uppercase tracking-[0.1em] text-gray-400 p-6 border border-dashed border-gray-300 dark:border-white/10 text-center">Chưa có site nào được lưu trong hệ thống.</div>
+                  <div className="text-xs uppercase tracking-wider text-gray-400 p-6 border border-dashed border-gray-300 dark:border-white/10 text-center">Chưa có site nào được lưu trong hệ thống.</div>
                 )
               ) : (
                 <div className="bg-[#FAF9F6] dark:bg-transparent p-6 rounded-none border border-gray-200 dark:border-white/10">
-                   <label className="block text-[10px] font-medium uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 mb-2">Nhập Thông Tin Hệ Thống</label>
-                   <p className="text-[10px] text-gray-400 mb-6 tracking-wide">Cú pháp: <code>URL|Tài_khoản|App_Password</code> (Mỗi website một dòng)</p>
+                   <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Nhập Thông Tin Hệ Thống</label>
+                   <p className="text-xs text-gray-400 mb-6 tracking-wide">Cú pháp: <code>URL|Tài_khoản|App_Password</code> (Mỗi website một dòng)</p>
                    <textarea 
                      rows={4}
                      value={quickSitesRaw}
@@ -289,11 +289,11 @@ export const PagesView: React.FC = () => {
             
             <div className="flex flex-col sm:flex-row sm:items-center justify-between pt-8 mt-8 border-t border-gray-100 dark:border-white/5 gap-6">
               <div className="flex items-center space-x-8">
-                <label className="flex items-center space-x-3 text-[10px] font-bold uppercase tracking-[0.1em] text-gray-600 dark:text-gray-300 cursor-pointer">
+                <label className="flex items-center space-x-3 text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-300 cursor-pointer">
                   <input type="radio" className="w-4 h-4 text-primary focus:ring-primary bg-transparent border-gray-300" name="status" checked={newStatus === 'publish'} onChange={() => setNewStatus('publish')} />
                   <span>Cập nhật Public</span>
                 </label>
-                <label className="flex items-center space-x-3 text-[10px] font-bold uppercase tracking-[0.1em] text-gray-600 dark:text-gray-300 cursor-pointer">
+                <label className="flex items-center space-x-3 text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-300 cursor-pointer">
                   <input type="radio" className="w-4 h-4 text-primary focus:ring-primary bg-transparent border-gray-300" name="status" checked={newStatus === 'draft'} onChange={() => setNewStatus('draft')} />
                   <span>Lưu Nháp</span>
                 </label>
@@ -302,7 +302,7 @@ export const PagesView: React.FC = () => {
               <button 
                 type="submit" 
                 disabled={isSubmitting || (pushMode === 'saved' && targetSiteIds.length === 0) || (pushMode === 'quick' && quickSitesRaw.trim() === '')}
-                className="flex justify-center items-center px-8 py-4 bg-primary text-black hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black font-semibold uppercase tracking-[0.2em] text-[10px] rounded-none border border-primary transition-all duration-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex justify-center items-center px-8 py-4 bg-primary text-black hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black font-bold uppercase tracking-wider text-xs rounded-none border border-primary transition-all duration-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSubmitting ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : null}
                 {editingId ? 'Đồng bộ Chỉnh Sửa' : (newStatus === 'publish' ? 'Đăng lên các Web đã chọn' : 'Lưu Nháp lên các Web')}
@@ -318,15 +318,15 @@ export const PagesView: React.FC = () => {
         </div>
       ) : pages.length === 0 ? (
         <div className="text-center py-32 bg-transparent border border-gray-200 dark:border-white/10 rounded-none">
-          <h3 className="text-2xl font-serif text-gray-900 dark:text-white mb-4 tracking-[0.1em] uppercase">Chưa Có Dữ Liệu</h3>
-          <p className="text-gray-500 text-sm mb-8 tracking-wide font-light">Không tìm thấy bản ghi nội dung tĩnh nào. Vui lòng thiết lập để tiếp tục.</p>
-          <button onClick={openCreateForm} className="px-8 py-4 border border-primary text-primary hover:bg-primary hover:text-black dark:hover:text-black transition-colors font-semibold uppercase tracking-[0.2em] text-[10px]">Khởi tạo Dữ liệu Tĩnh</button>
+          <h3 className="text-2xl font-serif text-gray-900 dark:text-white mb-4 tracking-wider uppercase">Chưa Có Dữ Liệu</h3>
+          <p className="text-gray-500 text-sm mb-8 tracking-wide font-semibold">Không tìm thấy bản ghi nội dung tĩnh nào. Vui lòng thiết lập để tiếp tục.</p>
+          <button onClick={openCreateForm} className="px-8 py-4 border border-primary text-primary hover:bg-primary hover:text-black dark:hover:text-black transition-colors font-bold uppercase tracking-wider text-xs">Khởi tạo Dữ liệu Tĩnh</button>
         </div>
       ) : (
         <div className="bg-transparent border border-gray-200 dark:border-white/10 rounded-none overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm text-gray-600 dark:text-gray-400">
-              <thead className="bg-[#FAF9F6] dark:bg-[#050505] text-[10px] uppercase tracking-[0.2em] font-medium text-gray-500 border-b border-gray-200 dark:border-white/10">
+              <thead className="bg-[#FAF9F6] dark:bg-[#050505] text-xs uppercase tracking-wider font-bold text-gray-500 border-b border-gray-200 dark:border-white/10">
                 <tr>
                   <th className="px-8 py-6">Tiêu đề Trang</th>
                   <th className="px-8 py-6 w-32">Trạng thái</th>
@@ -338,7 +338,7 @@ export const PagesView: React.FC = () => {
                 {pages.map(page => (
                   <tr key={page.id} className="hover:bg-[#FAF9F6] dark:hover:bg-[#0A0A0A] transition-colors duration-300 group">
                     <td className="px-8 py-5 font-serif text-gray-900 dark:text-white truncate max-w-xs tracking-wide" dangerouslySetInnerHTML={{ __html: page.title.rendered }}></td>
-                    <td className="px-8 py-5 uppercase text-[10px] tracking-widest font-semibold flex items-center">
+                    <td className="px-8 py-5 uppercase text-xs tracking-widest font-bold flex items-center">
                       <span className={`w-1.5 h-1.5 rounded-full mr-2 ${
                         page.status === 'publish' ? 'bg-green-500' :
                         page.status === 'draft' ? 'bg-yellow-500' :
