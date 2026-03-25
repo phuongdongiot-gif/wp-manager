@@ -3,7 +3,8 @@ import { WPPost, SiteCredential } from '../types/wordpress';
 import { getPosts, createPost, updatePost, deletePost } from '../services/posts';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
-import { Loader2, Plus, Trash2, Edit, ExternalLink, Globe } from 'lucide-react';
+import { Loader2, Plus, Trash2, Edit, ExternalLink, Globe, DownloadCloud } from 'lucide-react';
+import { CrawlerModal } from '../components/CrawlerModal';
 import { api } from '../services/api';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
@@ -45,6 +46,7 @@ export const PostsView: React.FC = () => {
   
   // Form State
   const [showForm, setShowForm] = useState(false);
+  const [showCrawler, setShowCrawler] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newContent, setNewContent] = useState('');
   const [newStatus, setNewStatus] = useState<'publish' | 'draft'>('publish');
@@ -337,15 +339,23 @@ export const PostsView: React.FC = () => {
           <p className="text-xs tracking-wider uppercase text-gray-500 dark:text-gray-400 mt-3 inline-block">Nội dung tin tức và kiến thức</p>
         </div>
         {!showForm && (
-          <button 
-            onClick={() => {
-              setTargetSiteIds(activeSiteId ? [activeSiteId] : []);
-              setShowForm(true);
-            }}
-            className="flex items-center px-6 py-3 bg-primary text-black hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all duration-500 font-bold uppercase tracking-wider text-xs rounded-none border border-primary"
-          >
-            <Plus className="w-4 h-4 mr-2" strokeWidth={1.5} /> Thêm Bài viết
-          </button>
+          <div className="flex space-x-4">
+            <button 
+              onClick={() => setShowCrawler(true)}
+              className="flex items-center px-6 py-3 bg-white dark:bg-transparent text-black dark:text-white hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all duration-500 font-bold uppercase tracking-wider text-xs rounded-none border border-gray-900 dark:border-white"
+            >
+              <DownloadCloud className="w-4 h-4 mr-2" strokeWidth={1.5} /> Thu Thập
+            </button>
+            <button 
+              onClick={() => {
+                setTargetSiteIds(activeSiteId ? [activeSiteId] : []);
+                setShowForm(true);
+              }}
+              className="flex items-center px-6 py-3 bg-primary text-black hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all duration-500 font-bold uppercase tracking-wider text-xs rounded-none border border-primary"
+            >
+              <Plus className="w-4 h-4 mr-2" strokeWidth={1.5} /> Thêm Bài viết
+            </button>
+          </div>
         )}
       </div>
 
@@ -606,6 +616,7 @@ export const PostsView: React.FC = () => {
           </div>
         </div>
       )}
+      <CrawlerModal isOpen={showCrawler} onClose={() => { setShowCrawler(false); loadPosts(); }} defaultType="post" />
     </div>
   );
 };

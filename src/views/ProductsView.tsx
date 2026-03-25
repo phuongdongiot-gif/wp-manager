@@ -3,7 +3,8 @@ import { useAuth } from '../context/AuthContext';
 import { getProducts, createProduct, updateProduct, deleteProduct, getCategories } from '../services/woocommerce';
 import { api } from '../services/api';
 import { WCProduct, WCCategory } from '../types/wordpress';
-import { Loader2, Plus, Edit, Trash2, ExternalLink, Globe } from 'lucide-react';
+import { Loader2, Plus, Edit, Trash2, ExternalLink, Globe, DownloadCloud } from 'lucide-react';
+import { CrawlerModal } from '../components/CrawlerModal';
 import { toast } from 'sonner';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
@@ -14,6 +15,7 @@ export const ProductsView: React.FC = () => {
   const [availableCategories, setAvailableCategories] = useState<WCCategory[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [showCrawler, setShowCrawler] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [editingProductId, setEditingProductId] = useState<number | null>(null);
@@ -218,15 +220,23 @@ export const ProductsView: React.FC = () => {
           <p className="text-xs tracking-[0.1em] uppercase text-gray-500 dark:text-gray-400 mt-3 inline-block">Hệ thống Cửa Hàng Giới Hạn</p>
         </div>
         {!showForm && (
-          <button 
-            onClick={() => {
-              setTargetSiteIds(activeSiteId ? [activeSiteId] : []);
-              setShowForm(true);
-            }}
-            className="flex items-center px-6 py-3 bg-primary text-black hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all duration-500 font-bold uppercase tracking-wider text-xs rounded-none border border-primary"
-          >
-            <Plus className="w-4 h-4 mr-2" strokeWidth={1.5} /> Thêm Sản phẩm
-          </button>
+          <div className="flex space-x-4">
+            <button 
+              onClick={() => setShowCrawler(true)}
+              className="flex items-center px-6 py-3 bg-white dark:bg-transparent text-black dark:text-white hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all duration-500 font-bold uppercase tracking-wider text-xs rounded-none border border-gray-900 dark:border-white"
+            >
+              <DownloadCloud className="w-4 h-4 mr-2" strokeWidth={1.5} /> Thu Thập
+            </button>
+            <button 
+              onClick={() => {
+                setTargetSiteIds(activeSiteId ? [activeSiteId] : []);
+                setShowForm(true);
+              }}
+              className="flex items-center px-6 py-3 bg-primary text-black hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all duration-500 font-bold uppercase tracking-wider text-xs rounded-none border border-primary"
+            >
+              <Plus className="w-4 h-4 mr-2" strokeWidth={1.5} /> Thêm Sản phẩm
+            </button>
+          </div>
         )}
       </div>
 
@@ -455,6 +465,7 @@ export const ProductsView: React.FC = () => {
           </div>
         </div>
       )}
+      <CrawlerModal isOpen={showCrawler} onClose={() => setShowCrawler(false)} defaultType="product" />
     </div>
   );
 };
