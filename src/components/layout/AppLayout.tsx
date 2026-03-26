@@ -1,7 +1,7 @@
 import React from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { Link, useLocation } from 'react-router-dom';
-import { Settings, Plus, Check, FileText, LayoutTemplate, Home, ShoppingBag } from 'lucide-react';
+import { Settings, Plus, Check, FileText, LayoutTemplate, Home, ShoppingBag, BarChart3 } from 'lucide-react';
 
 export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { sites, activeSiteId, switchSite } = useAuth();
@@ -9,6 +9,7 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
 
   const navItems = [
     { name: 'Bảng thống kê', icon: Home, path: '/' },
+    { name: 'Báo cáo', icon: BarChart3, path: '/analytics' },
     { name: 'Sản phẩm', icon: ShoppingBag, path: '/products' },
     { name: 'Bài viết', icon: FileText, path: '/posts' },
     { name: 'Trang', icon: LayoutTemplate, path: '/pages' },

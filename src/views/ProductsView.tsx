@@ -8,13 +8,17 @@ import { CrawlerModal } from '../components/CrawlerModal';
 import { FacebookSettingsModal, FacebookIcon } from '../components/FacebookSettingsModal';
 import { FacebookPosterModal } from '../components/FacebookPosterModal';
 import { GoogleSettingsModal, GoogleIcon } from '../components/GoogleSettingsModal';
+import { ShopeeSettingsModal, ShopeeIcon } from '../components/ShopeeSettingsModal';
+import { LazadaSettingsModal, LazadaIcon } from '../components/LazadaSettingsModal';
 import { googleIndexingApi } from '../services/google-indexing';
+import { shopeeApi } from '../services/shopee';
+import { lazadaApi } from '../services/lazada';
 import { toast } from 'sonner';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
 
 export const ProductsView: React.FC = () => {
-  const { sites, activeSiteId, autoIndexOnPublish, googleServiceAccount } = useAuth();
+  const { sites, activeSiteId, autoIndexOnPublish, googleServiceAccount, shopeeConfig, lazadaConfig } = useAuth();
   const [products, setProducts] = useState<WCProduct[]>([]);
   const [availableCategories, setAvailableCategories] = useState<WCCategory[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -45,6 +49,12 @@ export const ProductsView: React.FC = () => {
   const [fbPostImage, setFbPostImage] = useState('');
 
   const [showGoogleSettings, setShowGoogleSettings] = useState(false);
+  
+  const [showShopeeSettings, setShowShopeeSettings] = useState(false);
+  const [isPushingShopeeId, setIsPushingShopeeId] = useState<number | null>(null);
+
+  const [showLazadaSettings, setShowLazadaSettings] = useState(false);
+  const [isPushingLazadaId, setIsPushingLazadaId] = useState<number | null>(null);
 
   const quillRef = useRef<ReactQuill>(null);
 
@@ -228,6 +238,44 @@ export const ProductsView: React.FC = () => {
     }
   };
 
+  const handlePushToShopee = async (product: WCProduct) => {
+    if (!shopeeConfig) {
+      toast.error('Vui lòng cấu hình Shopee trước khi đồng bộ.');
+      setShowShopeeSettings(true);
+      return;
+    }
+    
+    setIsPushingShopeeId(product.id);
+    const toastId = toast.loading(`Đang đồng bộ ${product.name} lên Shopee...`);
+    try {
+       await shopeeApi.pushItem(shopeeConfig, product);
+       toast.success(`Đã đồng bộ sản phẩm lên Shopee thành công!`, { id: toastId });
+    } catch (e: any) {
+       toast.error(`Lỗi đồng bộ Shopee: ${e.message}`, { id: toastId });
+    } finally {
+       setIsPushingShopeeId(null);
+    }
+  };
+
+  const handlePushToLazada = async (product: WCProduct) => {
+    if (!lazadaConfig) {
+      toast.error('Vui lòng cấu hình Lazada trước khi đồng bộ.');
+      setShowLazadaSettings(true);
+      return;
+    }
+    
+    setIsPushingLazadaId(product.id);
+    const toastId = toast.loading(`Đang đồng bộ ${product.name} lên Lazada...`);
+    try {
+       await lazadaApi.pushItem(lazadaConfig, product);
+       toast.success(`Đã đồng bộ sản phẩm lên Lazada thành công!`, { id: toastId });
+    } catch (e: any) {
+       toast.error(`Lỗi đồng bộ Lazada: ${e.message}`, { id: toastId });
+    } finally {
+       setIsPushingLazadaId(null);
+    }
+  };
+
   if (!activeSite) return null;
 
   return (
@@ -245,6 +293,20 @@ export const ProductsView: React.FC = () => {
               title="Cấu hình Google Indexing"
             >
               <GoogleIcon className="w-[18px] h-[18px]" />
+            </button>
+            <button 
+              onClick={() => setShowShopeeSettings(true)}
+              className="flex items-center justify-center p-3 bg-white dark:bg-transparent text-[#EE4D2D] hover:bg-[#EE4D2D] hover:text-white transition-all duration-500 rounded-none border border-gray-200 dark:border-white/10 hover:border-[#EE4D2D]"
+              title="Cấu hình Kết nối Shopee"
+            >
+              <ShopeeIcon className="w-[18px] h-[18px]" />
+            </button>
+            <button 
+              onClick={() => setShowLazadaSettings(true)}
+              className="flex items-center justify-center p-3 bg-white dark:bg-transparent text-[#0F146D] hover:bg-[#0F146D] hover:text-white transition-all duration-500 rounded-none border border-gray-200 dark:border-white/10 hover:border-[#0F146D]"
+              title="Cấu hình Kết nối Lazada"
+            >
+              <LazadaIcon className="w-[18px] h-[18px]" />
             </button>
             <button 
               onClick={() => setShowFbSettings(true)}
@@ -493,6 +555,12 @@ export const ProductsView: React.FC = () => {
                         }} className="text-[#1877F2]/70 hover:text-[#1877F2] transition-colors" title="Đăng lên Facebook">
                           <FacebookIcon className="w-4 h-4" />
                         </button>
+                        <button onClick={() => handlePushToShopee(prod)} disabled={isPushingShopeeId === prod.id} className="text-[#EE4D2D]/70 hover:text-[#EE4D2D] transition-colors disabled:opacity-50" title="Đồng bộ lên Shopee">
+                          {isPushingShopeeId === prod.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShopeeIcon className="w-4 h-4" />}
+                        </button>
+                        <button onClick={() => handlePushToLazada(prod)} disabled={isPushingLazadaId === prod.id} className="text-[#0F146D]/70 hover:text-[#0F146D] transition-colors disabled:opacity-50" title="Đồng bộ lên Lazada">
+                          {isPushingLazadaId === prod.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <LazadaIcon className="w-4 h-4" />}
+                        </button>
                         <a href={prod.permalink} target="_blank" rel="noreferrer" className="text-gray-400 hover:text-primary transition-colors" title="View"><ExternalLink className="w-4 h-4" strokeWidth={1.5} /></a>
                         <button onClick={() => handleEditClick(prod)} className="text-gray-400 hover:text-primary transition-colors" title="Edit"><Edit className="w-4 h-4" strokeWidth={1.5} /></button>
                         <button onClick={() => handleDelete(prod.id)} className="text-gray-400 hover:text-red-500 transition-colors" title="Delete"><Trash2 className="w-4 h-4" strokeWidth={1.5} /></button>
@@ -509,6 +577,8 @@ export const ProductsView: React.FC = () => {
       <FacebookSettingsModal isOpen={showFbSettings} onClose={() => setShowFbSettings(false)} />
       <FacebookPosterModal isOpen={showFbPoster} onClose={() => setShowFbPoster(false)} defaultMessage={fbPostTitle} defaultLink={fbPostUrl} defaultImage={fbPostImage} />
       <GoogleSettingsModal isOpen={showGoogleSettings} onClose={() => setShowGoogleSettings(false)} />
+      <ShopeeSettingsModal isOpen={showShopeeSettings} onClose={() => setShowShopeeSettings(false)} />
+      <LazadaSettingsModal isOpen={showLazadaSettings} onClose={() => setShowLazadaSettings(false)} />
     </div>
   );
 };

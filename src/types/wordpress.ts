@@ -17,6 +17,7 @@ export interface SiteCredential {
   username: string;
   password?: string; // App password
   siteName?: string; // From the WP API
+  gaPropertyId?: string; // GA4 Property ID for Analytics
 }
 
 export interface WPPost {

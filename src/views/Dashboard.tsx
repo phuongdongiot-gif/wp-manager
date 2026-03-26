@@ -1,12 +1,26 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
 import { LogOut, Plus } from 'lucide-react';
+import { toast } from 'sonner';
 
 export const Dashboard: React.FC = () => {
-  const { sites, activeSiteId, removeSite } = useAuth();
+  const { sites, activeSiteId, removeSite, updateSite } = useAuth();
   
   const activeSite = sites.find(s => s.id === activeSiteId);
+  const [gaInput, setGaInput] = useState('');
+
+  useEffect(() => {
+    if (activeSite) {
+      setGaInput(activeSite.gaPropertyId || '');
+    }
+  }, [activeSite]);
+
+  const handleSaveGa = async () => {
+    if (!activeSite) return;
+    await updateSite(activeSite.id, { gaPropertyId: gaInput.trim() });
+    toast.success('Đã lưu cấu hình GA4 Property ID.');
+  };
 
   if (!activeSite) {
     return (
@@ -40,6 +54,22 @@ export const Dashboard: React.FC = () => {
           <LogOut className="w-4 h-4 mr-2" strokeWidth={1.5} /> Hủy kết nối
         </button>
       </header>
+
+      <div className="mb-12 bg-[#FAF9F6] dark:bg-transparent p-8 rounded-none border border-gray-200 dark:border-white/10 flex items-end space-x-4">
+         <div className="flex-1">
+            <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-3">Google Analytics 4 Property ID (Dùng cho Báo Cáo)</label>
+            <input 
+              type="text" 
+              value={gaInput}
+              onChange={e => setGaInput(e.target.value)}
+              className="w-full bg-transparent border-b border-gray-300 dark:border-white/20 text-gray-900 dark:text-white px-0 py-2 focus:border-primary outline-none text-sm transition-colors"
+              placeholder="VD: 312345678"
+            />
+         </div>
+         <button onClick={handleSaveGa} className="px-6 py-2 border border-gray-300 dark:border-white/20 text-xs font-bold tracking-widest uppercase hover:bg-gray-100 dark:hover:bg-white/10 transition-colors">
+            Lưu
+         </button>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <Link to="/posts" className="bg-white dark:bg-transparent p-10 rounded-none border border-gray-200 dark:border-white/10 hover:border-primary transition-colors duration-500 group block relative">

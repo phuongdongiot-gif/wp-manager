@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { useStore } from '../services/store';
+import { useStore, ShopeeConfig, LazadaConfig } from '../services/store';
 import { SiteCredential } from '../types/wordpress';
 
 interface AuthState {
@@ -10,10 +10,13 @@ interface AuthState {
   fbPage: { id: string, name: string, access_token: string } | null;
   googleServiceAccount: string | null;
   autoIndexOnPublish: boolean;
+  shopeeConfig: ShopeeConfig | null;
+  lazadaConfig: LazadaConfig | null;
 }
 
 interface AuthContextType extends AuthState {
   addSite: (url: string, user: string, pass: string, siteName?: string) => Promise<boolean>;
+  updateSite: (id: string, updates: Partial<SiteCredential>) => Promise<void>;
   switchSite: (id: string) => Promise<void>;
   removeSite: (id: string) => Promise<void>;
   getActiveSite: () => SiteCredential | undefined;
@@ -21,6 +24,8 @@ interface AuthContextType extends AuthState {
   setFbPage: (page: { id: string, name: string, access_token: string } | null) => Promise<void>;
   setGoogleServiceAccount: (json: string | null) => Promise<void>;
   setAutoIndexOnPublish: (val: boolean) => Promise<void>;
+  setShopeeConfig: (config: ShopeeConfig | null) => Promise<void>;
+  setLazadaConfig: (config: LazadaConfig | null) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -33,7 +38,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     fbToken: null,
     fbPage: null,
     googleServiceAccount: null,
-    autoIndexOnPublish: false
+    autoIndexOnPublish: false,
+    shopeeConfig: null,
+    lazadaConfig: null
   });
   const store = useStore();
 
@@ -46,6 +53,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const fbPage = await store.getFacebookPage();
       const googleServiceAccount = await store.getGoogleServiceAccount();
       const autoIndexOnPublish = await store.getAutoIndexOnPublish();
+      const shopeeConfig = await store.getShopeeConfig();
+      const lazadaConfig = await store.getLazadaConfig();
       
       setState({ 
         sites, 
@@ -54,7 +63,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         fbToken,
         fbPage,
         googleServiceAccount,
-        autoIndexOnPublish
+        autoIndexOnPublish,
+        shopeeConfig,
+        lazadaConfig
       });
       
       // Auto-fix active site if the previous one was deleted or not found
@@ -80,6 +91,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const sites = await store.getSites();
     setState({ ...state, sites, activeSiteId: id });
     return true;
+  };
+
+  const updateSite = async (id: string, updates: Partial<SiteCredential>) => {
+    const site = state.sites.find(s => s.id === id);
+    if (!site) return;
+    const newSite = { ...site, ...updates };
+    await store.addSite(newSite);
+    const sites = await store.getSites();
+    setState(prev => ({ ...prev, sites }));
   };
 
   const switchSite = async (id: string) => {
@@ -118,17 +138,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setState(prev => ({ ...prev, autoIndexOnPublish: val }));
   };
 
+  const handleSetShopeeConfig = async (config: ShopeeConfig | null) => {
+    await store.setShopeeConfig(config);
+    setState(prev => ({ ...prev, shopeeConfig: config }));
+  };
+
+  const handleSetLazadaConfig = async (config: LazadaConfig | null) => {
+    await store.setLazadaConfig(config);
+    setState(prev => ({ ...prev, lazadaConfig: config }));
+  };
+
   return (
     <AuthContext.Provider value={{ 
       ...state, 
       addSite, 
+      updateSite,
       switchSite, 
       removeSite, 
       getActiveSite,
       setFbToken: handleSetFbToken,
       setFbPage: handleSetFbPage,
       setGoogleServiceAccount: handleSetGoogleServiceAccount,
-      setAutoIndexOnPublish: handleSetAutoIndexOnPublish
+      setAutoIndexOnPublish: handleSetAutoIndexOnPublish,
+      setShopeeConfig: handleSetShopeeConfig,
+      setLazadaConfig: handleSetLazadaConfig
     }}>
       {children}
     </AuthContext.Provider>
