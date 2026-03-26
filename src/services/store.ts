@@ -55,5 +55,44 @@ export const useStore = () => ({
     const store = await getStore();
     await store.clear();
     await store.save();
+  },
+  async getFacebookToken(): Promise<string | null> {
+    const store = await getStore();
+    return (await store.get<string>('fb_access_token')) || null;
+  },
+  async setFacebookToken(token: string | null): Promise<void> {
+    const store = await getStore();
+    if (token) await store.set('fb_access_token', token);
+    else await store.delete('fb_access_token');
+    await store.save();
+  },
+  async getFacebookPage(): Promise<{id: string, name: string, access_token: string} | null> {
+    const store = await getStore();
+    return (await store.get<{id: string, name: string, access_token: string}>('fb_active_page')) || null;
+  },
+  async setFacebookPage(page: {id: string, name: string, access_token: string} | null): Promise<void> {
+    const store = await getStore();
+    if (page) await store.set('fb_active_page', page);
+    else await store.delete('fb_active_page');
+    await store.save();
+  },
+  async getGoogleServiceAccount(): Promise<string | null> {
+    const store = await getStore();
+    return (await store.get<string>('google_service_account')) || null;
+  },
+  async setGoogleServiceAccount(json: string | null): Promise<void> {
+    const store = await getStore();
+    if (json) await store.set('google_service_account', json);
+    else await store.delete('google_service_account');
+    await store.save();
+  },
+  async getAutoIndexOnPublish(): Promise<boolean> {
+    const store = await getStore();
+    return (await store.get<boolean>('auto_index_on_publish')) ?? false;
+  },
+  async setAutoIndexOnPublish(val: boolean): Promise<void> {
+    const store = await getStore();
+    await store.set('auto_index_on_publish', val);
+    await store.save();
   }
 });

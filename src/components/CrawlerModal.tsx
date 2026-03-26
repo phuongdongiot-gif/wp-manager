@@ -5,8 +5,11 @@ import { api } from '../services/api';
 import { createPost } from '../services/posts';
 import { createProduct } from '../services/woocommerce';
 import { fetch as tauriFetch } from '@tauri-apps/plugin-http';
-import { Loader2, Link as LinkIcon, Globe, ChevronRight, Play, Edit2, Trash2, CheckCircle2 } from 'lucide-react';
+import { googleIndexingApi } from '../services/google-indexing';
+import { Loader2, Link as LinkIcon, Globe, ChevronRight, Play, Trash2, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
+import ReactQuill from 'react-quill-new';
+import 'react-quill-new/dist/quill.snow.css';
 
 interface CrawlerModalProps {
   isOpen: boolean;
@@ -17,11 +20,12 @@ interface CrawlerModalProps {
 type Step = 'input' | 'review' | 'pushing';
 
 export const CrawlerModal: React.FC<CrawlerModalProps> = ({ isOpen, onClose, defaultType = 'post' }) => {
-  const { sites, activeSiteId } = useAuth();
+  const { sites, activeSiteId, autoIndexOnPublish, googleServiceAccount } = useAuth();
   const [step, setStep] = useState<Step>('input');
   const [targetSiteIds, setTargetSiteIds] = useState<string[]>([]);
   const [crawlMode, setCrawlMode] = useState<'direct' | 'sitemap'>('direct');
   const [urlInput, setUrlInput] = useState('');
+  const [globalTargetLink, setGlobalTargetLink] = useState('');
   const [targetType, setTargetType] = useState<'post' | 'product'>(defaultType);
   
   const [sitemapUrls, setSitemapUrls] = useState<string[]>([]);
@@ -43,6 +47,7 @@ export const CrawlerModal: React.FC<CrawlerModalProps> = ({ isOpen, onClose, def
       setSitemapUrls([]);
       setSelectedUrls([]);
       setUrlInput('');
+      setGlobalTargetLink('');
     }
   }, [isOpen, activeSiteId, defaultType]);
 
@@ -91,7 +96,7 @@ export const CrawlerModal: React.FC<CrawlerModalProps> = ({ isOpen, onClose, def
     for (let i = 0; i < targetUrls.length; i++) {
        const curl = targetUrls[i];
        try {
-         const data = await crawler.crawlPage(curl);
+         const data = await crawler.crawlPage(curl, globalTargetLink);
          if (!data.title) data.title = `Crawled Entry ${new Date().getTime()}`;
          items.push(data);
        } catch (err: any) {
@@ -123,9 +128,7 @@ export const CrawlerModal: React.FC<CrawlerModalProps> = ({ isOpen, onClose, def
     const newItems = [...crawledItems];
     newItems.splice(index, 1);
     setCrawledItems(newItems);
-    if (newItems.length === 0) {
-       setStep('input');
-    }
+    if (newItems.length === 0) setStep('input');
   };
 
   const processPushToWP = async () => {
@@ -139,53 +142,116 @@ export const CrawlerModal: React.FC<CrawlerModalProps> = ({ isOpen, onClose, def
     setProgress({ total: crawledItems.length, current: 0 });
 
     const selectedSites = sites.filter(s => targetSiteIds.includes(s.id));
-
     let successCount = 0;
 
     for (let i = 0; i < crawledItems.length; i++) {
        const data = crawledItems[i];
        try {
-         // Process Image
+         // Process Featured Image
          let imgFile: File | null = null;
          if (data.image) {
             try {
-              const imgResp = await tauriFetch(data.image);
+              const imgResp = await tauriFetch(data.image, {
+                headers: {
+                  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                  'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8'
+                }
+              });
               if (imgResp.ok) {
                 const blob = await imgResp.blob();
-                let fileName = data.image.split('?')[0].split('/').pop() || 'image.jpg';
+                let fileName = data.image.split('?')[0].split('/').pop() || 'featured.jpg';
                 if (!fileName.includes('.')) fileName += '.jpg';
                 imgFile = new File([blob], fileName, { type: blob.type });
               }
-            } catch (imgError) {
-              console.warn('Lỗi tải ảnh:', imgError);
-            }
+            } catch (imgError) {}
          }
 
          // Push to Selected Sites
          for (const site of selectedSites) {
+            
+            let siteMappedContent = data.content;
+
+            // Deep Content Image Upload
+            const contentImages = data.contentImages || [];
+            if (contentImages.length > 0) {
+               // Upload each image dynamically to avoid hotlinking
+               // To avoid spamming, one by one is safer
+               for (const cImgUrl of contentImages) {
+                 try {
+                   const cImgResp = await tauriFetch(cImgUrl, {
+                     headers: {
+                       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                       'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8'
+                     }
+                   });
+                   if (cImgResp.ok) {
+                     const cBlob = await cImgResp.blob();
+                     let fName = cImgUrl.split('?')[0].split('/').pop() || 'content_image.jpg';
+                     if (!fName.includes('.')) fName += '.jpg';
+                     const cFile = new File([cBlob], fName, { type: cBlob.type });
+                     const uploadedMedia = await api.uploadMedia(cFile, site);
+                     const siteMediaUrl = uploadedMedia.source_url || uploadedMedia.guid?.rendered;
+                     if (siteMediaUrl) {
+                       // Replace all occurrences of original URL with locally hosted WP URL
+                       // Handle both raw and HTML encoded formats safely
+                       const escapeRegExp = (string: string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                       const encodedImgUrl = cImgUrl.replace(/&/g, '&amp;');
+                       
+                       siteMappedContent = siteMappedContent.replace(new RegExp(escapeRegExp(cImgUrl), 'g'), siteMediaUrl);
+                       if (cImgUrl !== encodedImgUrl) {
+                          siteMappedContent = siteMappedContent.replace(new RegExp(escapeRegExp(encodedImgUrl), 'g'), siteMediaUrl);
+                       }
+                     }
+                   }
+                 } catch (e) {
+                   console.warn('Lỗi xử lý content image', e);
+                 }
+               }
+            }
+
+            // Featured Image Upload
             let mediaId: number | undefined = undefined;
             if (imgFile) {
                try {
                  const mediaData = await api.uploadMedia(imgFile, site);
                  mediaId = mediaData.id;
-               } catch (me) {
-                 console.warn(`Lỗi upload ảnh lên site ${site.siteName}:`, me);
-               }
+               } catch (me) {}
             }
 
+            // Map SEO Metadata
+            const meta: Record<string, string> = {};
+            if (data.seoKeywords) meta['rank_math_focus_keyword'] = data.seoKeywords;
+            if (data.seoTitle) meta['rank_math_title'] = data.seoTitle;
+            if (data.seoDescription) meta['rank_math_description'] = data.seoDescription;
+
             if (targetType === 'post') {
-               await createPost(data.title, data.content, 'publish', mediaId, undefined, undefined, site);
+               const p = await createPost(
+                 data.title, 
+                 siteMappedContent, 
+                 'publish', 
+                 mediaId, 
+                 Object.keys(meta).length > 0 ? meta : undefined, 
+                 undefined, 
+                 site
+               );
+               if (autoIndexOnPublish && googleServiceAccount && p.link) {
+                 googleIndexingApi.publishUrl(p.link, googleServiceAccount).catch(e => console.error("Index API Error: ", e));
+               }
             } else {
                const payload: any = {
                  name: data.title,
-                 description: data.content,
+                 description: siteMappedContent,
                  status: 'publish',
                };
                if (data.price) payload.regular_price = data.price;
-               if (mediaId && imgFile) {
-                  payload.images = [{ id: mediaId }];
+               if (mediaId && imgFile) payload.images = [{ id: mediaId }];
+               if (Object.keys(meta).length > 0) {
+                 payload.meta_data = Object.keys(meta).map(k => ({ key: k, value: meta[k] }));
                }
-               await createProduct(site, payload);
+               const prod = await createProduct(site, payload);
+               if (autoIndexOnPublish && googleServiceAccount && prod.permalink) {
+                 googleIndexingApi.publishUrl(prod.permalink, googleServiceAccount).catch(e => console.error("Index API Error: ", e));
+               }
             }
          }
          successCount++;
@@ -201,9 +267,6 @@ export const CrawlerModal: React.FC<CrawlerModalProps> = ({ isOpen, onClose, def
     onClose();
   };
 
-  // ---------------------------------------------
-  // RENDER HELPERS
-  // ---------------------------------------------
 
   const renderInputStep = () => (
     <div className="space-y-8 animate-fade-in">
@@ -262,6 +325,17 @@ export const CrawlerModal: React.FC<CrawlerModalProps> = ({ isOpen, onClose, def
          </div>
       </div>
 
+      <div className="space-y-4 pt-4 border-t border-gray-200 dark:border-white/10">
+         <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-2">Chuyển hướng toàn bộ Link (Tuỳ chọn)</label>
+         <input 
+           type="text" 
+           value={globalTargetLink}
+           onChange={e => setGlobalTargetLink(e.target.value)}
+           className="w-full px-4 py-3 border border-gray-200 dark:border-white/10 bg-[#FAF9F6] dark:bg-[#050505] text-gray-900 dark:text-white rounded-none focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors text-sm"
+           placeholder="Nhập URL (ví dụ: https://domaincuatoi.com/san-pham) hoặc gõ '#' để tự động xoá toàn bộ Links..."
+         />
+      </div>
+
       {crawlMode === 'sitemap' && sitemapUrls.length > 0 && (
         <div className="border border-gray-200 dark:border-white/10 rounded-none overflow-hidden flex flex-col max-h-[300px]">
            <div className="bg-[#FAF9F6] dark:bg-[#050505] p-4 flex justify-between items-center border-b border-gray-200 dark:border-white/10">
@@ -287,7 +361,7 @@ export const CrawlerModal: React.FC<CrawlerModalProps> = ({ isOpen, onClose, def
   const renderReviewStep = () => (
     <div className="space-y-6 animate-fade-in h-full flex flex-col">
        <div className="text-xs font-bold uppercase tracking-widest text-gray-500 flex justify-between items-end border-b border-gray-100 dark:border-white/10 pb-4">
-          <span>Kiểm duyệt ({crawledItems.length} Mẫu)</span>
+          <span>Kiểm duyệt ({crawledItems.length} Mẫu) Tính Năng Deep Image Đang Bật</span>
           <button onClick={() => setStep('input')} className="text-gray-400 hover:text-primary transition-colors">← Trở lại Trích Xuất</button>
        </div>
        <div className="overflow-y-auto pr-2 space-y-6 flex-1 min-h-[300px]">
@@ -303,21 +377,30 @@ export const CrawlerModal: React.FC<CrawlerModalProps> = ({ isOpen, onClose, def
                 <div className="flex flex-col sm:flex-row gap-6 mr-8">
                    <div className="w-full sm:w-1/3 max-w-[150px]">
                       {item.image ? (
-                        <img src={item.image} alt="preview" className="w-full h-auto object-cover border border-gray-100 dark:border-white/5" />
+                        <div className="relative">
+                          <label className="text-[10px] text-gray-400 uppercase font-bold absolute 0 top-0 bg-white/80 dark:bg-black/80 px-1 truncate w-full">Thẻ Feature (Ảnh Đại Diện)</label>
+                          <img src={item.image} alt="preview" className="w-full h-auto object-cover border border-gray-100 dark:border-white/5 pt-4" />
+                        </div>
                       ) : (
-                        <div className="w-full h-24 bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-[10px] text-gray-400 uppercase">NO IMAGE</div>
+                        <div className="w-full h-24 bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-[10px] text-gray-400 uppercase">NO FEATURE IMAGE</div>
                       )}
                       
                       {targetType === 'product' && (
                         <div className="mt-4 relative pt-4 border-t border-gray-100 dark:border-white/5">
-                          <label className="text-[10px] text-gray-400 uppercase font-bold absolute -top-2 bg-white dark:bg-[#0A0A0A] px-1">GIÁ</label>
+                          <label className="text-[10px] text-gray-400 uppercase font-bold absolute -top-2 bg-white dark:bg-[#0A0A0A] px-1">GIÁ BÁN</label>
                           <input 
                             type="text" 
                             className="w-full text-sm border-b border-gray-200 dark:border-white/10 bg-transparent text-primary font-bold focus:border-primary outline-none"
-                            value={item.price}
+                            value={item.price || ''}
                             onChange={(e) => handleUpdateItem(index, 'price', e.target.value)}
                             placeholder="Giá"
                           />
+                        </div>
+                      )}
+
+                      {(item.contentImages && item.contentImages.length > 0) && (
+                        <div className="mt-4 pt-4 border-t border-gray-100 dark:border-white/5 text-[10px] text-primary uppercase font-bold">
+                           Phát hiện {item.contentImages.length} Ảnh Nội Dung (Sẽ tự upload WP Media)
                         </div>
                       )}
                    </div>
@@ -330,7 +413,66 @@ export const CrawlerModal: React.FC<CrawlerModalProps> = ({ isOpen, onClose, def
                            onChange={(e) => handleUpdateItem(index, 'title', e.target.value)}
                         />
                       </div>
-                      <div className="bg-[#FAF9F6] dark:bg-[#050505] border border-gray-100 dark:border-white/5 p-3 h-32 overflow-y-auto text-xs text-gray-600 dark:text-gray-400 leading-relaxed font-mono" dangerouslySetInnerHTML={{ __html: item.content !== '' ? item.content : '<span class="text-gray-400">Không tìm thấy nội dung hoặc Cheerio đã bóc tách thất bại.</span>' }}>
+                      
+                      {/* SEO Fields Grid */}
+                      <div className="grid grid-cols-2 gap-4 border border-dashed border-gray-200 dark:border-white/10 p-4">
+                         <div className="col-span-2">
+                           <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1 block">Hình ảnh các thẻ SEO (SEO Title)</label>
+                           <input 
+                             type="text" 
+                             value={item.seoTitle || ''} 
+                             onChange={(e) => handleUpdateItem(index, 'seoTitle', e.target.value)}
+                             className="w-full text-xs border-b border-gray-200 dark:border-white/10 bg-transparent text-gray-800 dark:text-gray-200 focus:border-primary outline-none pb-1"
+                             placeholder="Meta Title..."
+                           />
+                         </div>
+                         <div className="col-span-2">
+                           <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1 block">SEO Description</label>
+                           <textarea 
+                             rows={2}
+                             value={item.seoDescription || ''} 
+                             onChange={(e) => handleUpdateItem(index, 'seoDescription', e.target.value)}
+                             className="w-full text-xs border-b border-gray-200 dark:border-white/10 bg-transparent text-gray-800 dark:text-gray-200 focus:border-primary outline-none resize-none pb-1"
+                             placeholder="Meta Description..."
+                           />
+                         </div>
+                         <div className="col-span-2">
+                           <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1 block">SEO Focus Keyword</label>
+                           <input 
+                             type="text" 
+                             value={item.seoKeywords || ''} 
+                             onChange={(e) => handleUpdateItem(index, 'seoKeywords', e.target.value)}
+                             className="w-full text-xs border-b border-gray-200 dark:border-white/10 bg-transparent text-gray-800 dark:text-gray-200 focus:border-primary outline-none pb-1"
+                             placeholder="Keywords..."
+                           />
+                         </div>
+                      </div>
+
+                      <div className="bg-white dark:bg-[#050505] border border-gray-100 dark:border-white/5 rounded-none flex-1 mt-4">
+                        <style>{`
+                          .ql-toolbar { border: none !important; border-bottom: 1px solid #e5e7eb !important; background: #faf9f6; }
+                          .dark .ql-toolbar { border-bottom: 1px solid rgba(255,255,255,0.1) !important; background: #0a0a0a; color: white; }
+                          .dark .ql-stroke { stroke: #999 !important; }
+                          .dark .ql-fill { fill: #999 !important; }
+                          .dark .ql-picker { color: #999 !important; }
+                          .ql-container { border: none !important; color: inherit; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;}
+                          .ql-editor img { max-width: 100% !important; height: auto !important; display: block; margin: 10px auto; border-radius: 8px; }
+                        `}</style>
+                        <ReactQuill 
+                          theme="snow"
+                          value={item.content || '<span class="text-gray-400">Không tìm thấy nội dung...</span>'}
+                          onChange={(val) => handleUpdateItem(index, 'content', val)}
+                          className="h-[250px] pb-12 text-sm text-gray-800 dark:text-gray-300"
+                          modules={{
+                            toolbar: [
+                              [{ 'header': [1, 2, false] }],
+                              ['bold', 'italic', 'underline', 'strike', 'blockquote'],
+                              [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                              ['link', 'image', 'video'],
+                              ['clean']
+                            ]
+                          }}
+                        />
                       </div>
                    </div>
                 </div>
@@ -345,12 +487,12 @@ export const CrawlerModal: React.FC<CrawlerModalProps> = ({ isOpen, onClose, def
        <Loader2 className="w-12 h-12 text-primary animate-spin" strokeWidth={1.5} />
        <div className="text-center">
          <h4 className="text-xl font-serif text-gray-900 dark:text-white uppercase tracking-widest mb-2">Đang Đồng Bộ Hoá</h4>
-         <p className="text-sm text-gray-500 uppercase tracking-widest font-bold">Xin vui lòng chờ đợi...</p>
+         <p className="text-sm text-gray-500 uppercase tracking-widest font-bold">Quá trình Deep Upload đang diễn ra (bao gồm Media cục bộ)...</p>
        </div>
        <div className="w-full max-w-md">
          <div className="flex justify-between text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">
-            <span>Tiến độ</span>
-            <span>{progress.current} / {progress.total} Mẫu</span>
+            <span>Tiến độ bài viết</span>
+            <span>{progress.current} / {progress.total}</span>
          </div>
          <div className="h-1 bg-gray-200 dark:bg-white/10 w-full overflow-hidden">
             <div className="h-full bg-primary transition-all duration-300" style={{ width: `${(progress.total === 0 ? 0 : (progress.current / progress.total)) * 100}%` }}></div>
@@ -389,7 +531,7 @@ export const CrawlerModal: React.FC<CrawlerModalProps> = ({ isOpen, onClose, def
                {isProcessing && step === 'input' && (
                  <div className="flex flex-col w-full">
                    <div className="flex justify-between text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">
-                      <span>Đang Bóc Tách Với Cheerio</span>
+                      <span>Đang Bóc Tách...</span>
                       <span>{progress.current} / {progress.total}</span>
                    </div>
                    <div className="h-1 bg-gray-200 dark:bg-white/10 w-full overflow-hidden">

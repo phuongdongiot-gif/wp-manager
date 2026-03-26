@@ -5,12 +5,16 @@ import { api } from '../services/api';
 import { WCProduct, WCCategory } from '../types/wordpress';
 import { Loader2, Plus, Edit, Trash2, ExternalLink, Globe, DownloadCloud } from 'lucide-react';
 import { CrawlerModal } from '../components/CrawlerModal';
+import { FacebookSettingsModal, FacebookIcon } from '../components/FacebookSettingsModal';
+import { FacebookPosterModal } from '../components/FacebookPosterModal';
+import { GoogleSettingsModal, GoogleIcon } from '../components/GoogleSettingsModal';
+import { googleIndexingApi } from '../services/google-indexing';
 import { toast } from 'sonner';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
 
 export const ProductsView: React.FC = () => {
-  const { sites, activeSiteId } = useAuth();
+  const { sites, activeSiteId, autoIndexOnPublish, googleServiceAccount } = useAuth();
   const [products, setProducts] = useState<WCProduct[]>([]);
   const [availableCategories, setAvailableCategories] = useState<WCCategory[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -33,6 +37,14 @@ export const ProductsView: React.FC = () => {
   const [pushMode, setPushMode] = useState<'saved' | 'quick'>('saved');
   const [targetSiteIds, setTargetSiteIds] = useState<string[]>([]);
   const [quickSitesRaw, setQuickSitesRaw] = useState('');
+
+  const [showFbSettings, setShowFbSettings] = useState(false);
+  const [showFbPoster, setShowFbPoster] = useState(false);
+  const [fbPostTitle, setFbPostTitle] = useState('');
+  const [fbPostUrl, setFbPostUrl] = useState('');
+  const [fbPostImage, setFbPostImage] = useState('');
+
+  const [showGoogleSettings, setShowGoogleSettings] = useState(false);
 
   const quillRef = useRef<ReactQuill>(null);
 
@@ -184,8 +196,14 @@ export const ProductsView: React.FC = () => {
               toast.error(`Lỗi tải ảnh lên site ${site.siteName}: ` + e);
             }
           }
-          await createProduct(site, sitePayload);
+          const newProd = await createProduct(site, sitePayload);
           successCount++;
+
+          if (autoIndexOnPublish && googleServiceAccount && newProd.permalink) {
+            googleIndexingApi.publishUrl(newProd.permalink, googleServiceAccount)
+              .then(() => toast.success(`Đã ép Google Index cho sản phẩm trên ${site.siteName || site.url}`))
+              .catch(e => toast.error(`Lỗi Index: ${e.message}`));
+          }
         }
         toast.success(`Đã xuất bản hệ thống thành công lên ${successCount} cửa hàng.`);
       }
@@ -221,6 +239,20 @@ export const ProductsView: React.FC = () => {
         </div>
         {!showForm && (
           <div className="flex space-x-4">
+            <button 
+              onClick={() => setShowGoogleSettings(true)}
+              className="flex items-center justify-center p-3 bg-white dark:bg-transparent text-[#4285F4] hover:bg-[#4285F4] hover:text-white transition-all duration-500 rounded-none border border-gray-200 dark:border-white/10 hover:border-[#4285F4]"
+              title="Cấu hình Google Indexing"
+            >
+              <GoogleIcon className="w-[18px] h-[18px]" />
+            </button>
+            <button 
+              onClick={() => setShowFbSettings(true)}
+              className="flex items-center justify-center p-3 bg-white dark:bg-transparent text-[#1877F2] hover:bg-[#1877F2] hover:text-white transition-all duration-500 rounded-none border border-gray-200 dark:border-white/10 hover:border-[#1877F2]"
+              title="Cấu hình Facebook Autopost"
+            >
+              <FacebookIcon className="w-[18px] h-[18px]" />
+            </button>
             <button 
               onClick={() => setShowCrawler(true)}
               className="flex items-center px-6 py-3 bg-white dark:bg-transparent text-black dark:text-white hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all duration-500 font-bold uppercase tracking-wider text-xs rounded-none border border-gray-900 dark:border-white"
@@ -453,6 +485,14 @@ export const ProductsView: React.FC = () => {
                     </td>
                     <td className="px-8 py-5 text-right align-middle">
                       <div className="flex items-center justify-end space-x-4 opacity-70 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => {
+                           setFbPostTitle(`${prod.name}\nGiá: ${prod.sale_price || prod.regular_price}đ\n\n${prod.permalink}`);
+                           setFbPostUrl(prod.permalink);
+                           setFbPostImage(prod.images?.[0]?.src || '');
+                           setShowFbPoster(true);
+                        }} className="text-[#1877F2]/70 hover:text-[#1877F2] transition-colors" title="Đăng lên Facebook">
+                          <FacebookIcon className="w-4 h-4" />
+                        </button>
                         <a href={prod.permalink} target="_blank" rel="noreferrer" className="text-gray-400 hover:text-primary transition-colors" title="View"><ExternalLink className="w-4 h-4" strokeWidth={1.5} /></a>
                         <button onClick={() => handleEditClick(prod)} className="text-gray-400 hover:text-primary transition-colors" title="Edit"><Edit className="w-4 h-4" strokeWidth={1.5} /></button>
                         <button onClick={() => handleDelete(prod.id)} className="text-gray-400 hover:text-red-500 transition-colors" title="Delete"><Trash2 className="w-4 h-4" strokeWidth={1.5} /></button>
@@ -466,6 +506,9 @@ export const ProductsView: React.FC = () => {
         </div>
       )}
       <CrawlerModal isOpen={showCrawler} onClose={() => setShowCrawler(false)} defaultType="product" />
+      <FacebookSettingsModal isOpen={showFbSettings} onClose={() => setShowFbSettings(false)} />
+      <FacebookPosterModal isOpen={showFbPoster} onClose={() => setShowFbPoster(false)} defaultMessage={fbPostTitle} defaultLink={fbPostUrl} defaultImage={fbPostImage} />
+      <GoogleSettingsModal isOpen={showGoogleSettings} onClose={() => setShowGoogleSettings(false)} />
     </div>
   );
 };
