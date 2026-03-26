@@ -6,6 +6,7 @@ import { Dashboard } from './views/Dashboard';
 import { PostsView } from './views/PostsView';
 import { PagesView } from './views/PagesView';
 import { ProductsView } from './views/ProductsView';
+import { AnalyticsView } from './views/AnalyticsView';
 import { AppLayout } from './components/layout/AppLayout';
 import { Toaster } from 'sonner';
 import './App.css';
@@ -38,6 +39,7 @@ function AppContent() {
             <PrivateRoute>
               <Routes>
                 <Route path="/" element={<Dashboard />} />
+                <Route path="/analytics" element={<AnalyticsView />} />
                 <Route path="/products" element={<ProductsView />} />
                 <Route path="/posts" element={<PostsView />} />
                 <Route path="/pages" element={<PagesView />} />

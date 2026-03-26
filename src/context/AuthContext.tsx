@@ -1,18 +1,31 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { useStore } from '../services/store';
+import { useStore, ShopeeConfig, LazadaConfig } from '../services/store';
 import { SiteCredential } from '../types/wordpress';
 
 interface AuthState {
   sites: SiteCredential[];
   activeSiteId: string | null;
   isLoading: boolean;
+  fbToken: string | null;
+  fbPage: { id: string, name: string, access_token: string } | null;
+  googleServiceAccount: string | null;
+  autoIndexOnPublish: boolean;
+  shopeeConfig: ShopeeConfig | null;
+  lazadaConfig: LazadaConfig | null;
 }
 
 interface AuthContextType extends AuthState {
   addSite: (url: string, user: string, pass: string, siteName?: string) => Promise<boolean>;
+  updateSite: (id: string, updates: Partial<SiteCredential>) => Promise<void>;
   switchSite: (id: string) => Promise<void>;
   removeSite: (id: string) => Promise<void>;
   getActiveSite: () => SiteCredential | undefined;
+  setFbToken: (token: string | null) => Promise<void>;
+  setFbPage: (page: { id: string, name: string, access_token: string } | null) => Promise<void>;
+  setGoogleServiceAccount: (json: string | null) => Promise<void>;
+  setAutoIndexOnPublish: (val: boolean) => Promise<void>;
+  setShopeeConfig: (config: ShopeeConfig | null) => Promise<void>;
+  setLazadaConfig: (config: LazadaConfig | null) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -21,7 +34,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [state, setState] = useState<AuthState>({
     sites: [],
     activeSiteId: null,
-    isLoading: true
+    isLoading: true,
+    fbToken: null,
+    fbPage: null,
+    googleServiceAccount: null,
+    autoIndexOnPublish: false,
+    shopeeConfig: null,
+    lazadaConfig: null
   });
   const store = useStore();
 
@@ -30,11 +49,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const initAuth = async () => {
       const sites = await store.getSites();
       const activeSiteId = await store.getActiveSiteId();
+      const fbToken = await store.getFacebookToken();
+      const fbPage = await store.getFacebookPage();
+      const googleServiceAccount = await store.getGoogleServiceAccount();
+      const autoIndexOnPublish = await store.getAutoIndexOnPublish();
+      const shopeeConfig = await store.getShopeeConfig();
+      const lazadaConfig = await store.getLazadaConfig();
       
       setState({ 
         sites, 
         activeSiteId: sites.some(s => s.id === activeSiteId) ? activeSiteId : (sites.length > 0 ? sites[0].id : null), 
-        isLoading: false 
+        isLoading: false,
+        fbToken,
+        fbPage,
+        googleServiceAccount,
+        autoIndexOnPublish,
+        shopeeConfig,
+        lazadaConfig
       });
       
       // Auto-fix active site if the previous one was deleted or not found
@@ -62,6 +93,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return true;
   };
 
+  const updateSite = async (id: string, updates: Partial<SiteCredential>) => {
+    const site = state.sites.find(s => s.id === id);
+    if (!site) return;
+    const newSite = { ...site, ...updates };
+    await store.addSite(newSite);
+    const sites = await store.getSites();
+    setState(prev => ({ ...prev, sites }));
+  };
+
   const switchSite = async (id: string) => {
     await store.setActiveSiteId(id);
     setState({ ...state, activeSiteId: id });
@@ -78,8 +118,51 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return state.sites.find(s => s.id === state.activeSiteId);
   };
 
+  const handleSetFbToken = async (token: string | null) => {
+    await store.setFacebookToken(token);
+    setState(prev => ({ ...prev, fbToken: token }));
+  };
+
+  const handleSetFbPage = async (page: { id: string, name: string, access_token: string } | null) => {
+    await store.setFacebookPage(page);
+    setState(prev => ({ ...prev, fbPage: page }));
+  };
+
+  const handleSetGoogleServiceAccount = async (json: string | null) => {
+    await store.setGoogleServiceAccount(json);
+    setState(prev => ({ ...prev, googleServiceAccount: json }));
+  };
+
+  const handleSetAutoIndexOnPublish = async (val: boolean) => {
+    await store.setAutoIndexOnPublish(val);
+    setState(prev => ({ ...prev, autoIndexOnPublish: val }));
+  };
+
+  const handleSetShopeeConfig = async (config: ShopeeConfig | null) => {
+    await store.setShopeeConfig(config);
+    setState(prev => ({ ...prev, shopeeConfig: config }));
+  };
+
+  const handleSetLazadaConfig = async (config: LazadaConfig | null) => {
+    await store.setLazadaConfig(config);
+    setState(prev => ({ ...prev, lazadaConfig: config }));
+  };
+
   return (
-    <AuthContext.Provider value={{ ...state, addSite, switchSite, removeSite, getActiveSite }}>
+    <AuthContext.Provider value={{ 
+      ...state, 
+      addSite, 
+      updateSite,
+      switchSite, 
+      removeSite, 
+      getActiveSite,
+      setFbToken: handleSetFbToken,
+      setFbPage: handleSetFbPage,
+      setGoogleServiceAccount: handleSetGoogleServiceAccount,
+      setAutoIndexOnPublish: handleSetAutoIndexOnPublish,
+      setShopeeConfig: handleSetShopeeConfig,
+      setLazadaConfig: handleSetLazadaConfig
+    }}>
       {children}
     </AuthContext.Provider>
   );
