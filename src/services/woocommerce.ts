@@ -109,3 +109,23 @@ export const getCategories = async (site: SiteCredential): Promise<WCCategory[]>
 
   return await response.json() as WCCategory[];
 };
+
+export const createCategory = async (site: SiteCredential, name: string): Promise<WCCategory> => {
+  const credentials = btoa(`${site.username}:${site.password}`);
+  const response = await fetch(`${site.url}/wp-json/wc/v3/products/categories`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Basic ${credentials}`,
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    },
+    body: JSON.stringify({ name })
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => null);
+    throw new Error(errorData?.message || 'Failed to create category');
+  }
+
+  return await response.json() as WCCategory;
+};

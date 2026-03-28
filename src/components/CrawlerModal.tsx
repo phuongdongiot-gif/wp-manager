@@ -33,6 +33,7 @@ export const CrawlerModal: React.FC<CrawlerModalProps> = ({ isOpen, onClose, def
   
   // Review Step State
   const [crawledItems, setCrawledItems] = useState<CrawledData[]>([]);
+  const [reviewEditorMode, setReviewEditorMode] = useState<'visual' | 'code'>('visual');
   
   const [isLoading, setIsLoading] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -361,7 +362,13 @@ export const CrawlerModal: React.FC<CrawlerModalProps> = ({ isOpen, onClose, def
   const renderReviewStep = () => (
     <div className="space-y-6 animate-fade-in h-full flex flex-col">
        <div className="text-xs font-bold uppercase tracking-widest text-gray-500 flex justify-between items-end border-b border-gray-100 dark:border-white/10 pb-4">
-          <span>Kiểm duyệt ({crawledItems.length} Mẫu) Tính Năng Deep Image Đang Bật</span>
+          <div className="flex items-center gap-4">
+             <span>Kiểm duyệt ({crawledItems.length} Mẫu) Tính Năng Deep Image Đang Bật</span>
+             <div className="flex border border-gray-200 dark:border-white/10 rounded-none overflow-hidden xl:ml-4">
+                 <button type="button" onClick={() => setReviewEditorMode('visual')} className={`px-3 py-1 text-[9px] uppercase font-bold tracking-widest transition-colors ${reviewEditorMode === 'visual' ? 'bg-primary text-black' : 'bg-transparent text-gray-400 hover:text-gray-900 dark:hover:text-white border-r border-gray-200 dark:border-white/10'}`}>Trực Quan</button>
+                 <button type="button" onClick={() => setReviewEditorMode('code')} className={`px-3 py-1 text-[9px] uppercase font-bold tracking-widest transition-colors ${reviewEditorMode === 'code' ? 'bg-primary text-black' : 'bg-transparent text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}>Mã Hoá Raw</button>
+             </div>
+          </div>
           <button onClick={() => setStep('input')} className="text-gray-400 hover:text-primary transition-colors">← Trở lại Trích Xuất</button>
        </div>
        <div className="overflow-y-auto pr-2 space-y-6 flex-1 min-h-[300px]">
@@ -448,31 +455,42 @@ export const CrawlerModal: React.FC<CrawlerModalProps> = ({ isOpen, onClose, def
                          </div>
                       </div>
 
-                      <div className="bg-white dark:bg-[#050505] border border-gray-100 dark:border-white/5 rounded-none flex-1 mt-4">
-                        <style>{`
-                          .ql-toolbar { border: none !important; border-bottom: 1px solid #e5e7eb !important; background: #faf9f6; }
-                          .dark .ql-toolbar { border-bottom: 1px solid rgba(255,255,255,0.1) !important; background: #0a0a0a; color: white; }
-                          .dark .ql-stroke { stroke: #999 !important; }
-                          .dark .ql-fill { fill: #999 !important; }
-                          .dark .ql-picker { color: #999 !important; }
-                          .ql-container { border: none !important; color: inherit; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;}
-                          .ql-editor img { max-width: 100% !important; height: auto !important; display: block; margin: 10px auto; border-radius: 8px; }
-                        `}</style>
-                        <ReactQuill 
-                          theme="snow"
-                          value={item.content || '<span class="text-gray-400">Không tìm thấy nội dung...</span>'}
-                          onChange={(val) => handleUpdateItem(index, 'content', val)}
-                          className="h-[250px] pb-12 text-sm text-gray-800 dark:text-gray-300"
-                          modules={{
-                            toolbar: [
-                              [{ 'header': [1, 2, false] }],
-                              ['bold', 'italic', 'underline', 'strike', 'blockquote'],
-                              [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                              ['link', 'image', 'video'],
-                              ['clean']
-                            ]
-                          }}
-                        />
+                      <div className="bg-white dark:bg-[#050505] border border-gray-100 dark:border-white/5 rounded-none flex-1 mt-4 flex flex-col focus-within:border-primary transition-colors min-h-[250px]">
+                        {reviewEditorMode === 'visual' ? (
+                          <>
+                            <style>{`
+                              .ql-toolbar { border: none !important; border-bottom: 1px solid #e5e7eb !important; background: #faf9f6; }
+                              .dark .ql-toolbar { border-bottom: 1px solid rgba(255,255,255,0.1) !important; background: #0a0a0a; color: white; }
+                              .dark .ql-stroke { stroke: #999 !important; }
+                              .dark .ql-fill { fill: #999 !important; }
+                              .dark .ql-picker { color: #999 !important; }
+                              .ql-container { border: none !important; color: inherit; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;}
+                              .ql-editor img { max-width: 100% !important; height: auto !important; display: block; margin: 10px auto; border-radius: 8px; }
+                            `}</style>
+                            <ReactQuill 
+                              theme="snow"
+                              value={item.content || '<span class="text-gray-400">Không tìm thấy nội dung...</span>'}
+                              onChange={(val) => handleUpdateItem(index, 'content', val)}
+                              className="h-[250px] pb-12 text-sm text-gray-800 dark:text-gray-300 flex-1"
+                              modules={{
+                                toolbar: [
+                                  [{ 'header': [1, 2, false] }],
+                                  ['bold', 'italic', 'underline', 'strike', 'blockquote'],
+                                  [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                                  ['link', 'image', 'video'],
+                                  ['clean']
+                                ]
+                              }}
+                            />
+                          </>
+                        ) : (
+                          <textarea 
+                            value={item.content || ''}
+                            onChange={(e) => handleUpdateItem(index, 'content', e.target.value)}
+                            className="w-full flex-1 min-h-[250px] p-4 bg-[#FAF9F6] dark:bg-[#0A0A0A] text-xs font-mono text-gray-800 dark:text-gray-300 outline-none resize-none leading-relaxed"
+                            placeholder="Nhập mã HTML..."
+                          />
+                        )}
                       </div>
                    </div>
                 </div>

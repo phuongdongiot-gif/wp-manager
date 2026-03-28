@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { WPPost, SiteCredential } from '../types/wordpress';
-import { getPosts, createPost, updatePost, deletePost } from '../services/posts';
+import { getPosts, createPost, updatePost, deletePost, createCategory } from '../services/posts';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
 import { Loader2, Plus, Trash2, Edit, ExternalLink, Globe, DownloadCloud } from 'lucide-react';
@@ -59,6 +59,7 @@ export const PostsView: React.FC = () => {
   const [seoDescription, setSeoDescription] = useState('');
   const [featuredImage, setFeaturedImage] = useState<File | null>(null);
   const [featuredImagePreview, setFeaturedImagePreview] = useState<string>('');
+  const [editorMode, setEditorMode] = useState<'visual' | 'code'>('visual');
   
   const [showFbSettings, setShowFbSettings] = useState(false);
   const [showFbPoster, setShowFbPoster] = useState(false);
@@ -73,6 +74,8 @@ export const PostsView: React.FC = () => {
   const [availableCategories, setAvailableCategories] = useState<{id: number, name: string}[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<number[]>([]);
   const [editingPostId, setEditingPostId] = useState<number | null>(null);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [isCreatingCategory, setIsCreatingCategory] = useState(false);
 
   // Multi-site target state
   const [targetSiteIds, setTargetSiteIds] = useState<string[]>([]);
@@ -166,6 +169,22 @@ export const PostsView: React.FC = () => {
     }
   };
 
+  const handleCreateCategory = async () => {
+    if (!newCategoryName.trim() || !activeSiteId) return;
+    setIsCreatingCategory(true);
+    try {
+      const newCat = await createCategory(newCategoryName.trim(), activeSiteId);
+      setAvailableCategories(prev => [...prev, newCat]);
+      setSelectedCategories(prev => [...prev, newCat.id]);
+      setNewCategoryName('');
+      toast.success(`Đã tạo danh mục "${newCat.name}"`);
+    } catch (err: any) {
+      toast.error('Lỗi tạo danh mục: ' + err.message);
+    } finally {
+      setIsCreatingCategory(false);
+    }
+  };
+
   const loadPosts = async () => {
     setIsLoading(true);
     try {
@@ -227,11 +246,40 @@ export const PostsView: React.FC = () => {
               const mediaRes = await api.uploadMedia(featuredImage, target);
               mediaId = mediaRes.id;
             }
+            
+            // Map Categories by Name for Cross-Site Publishing
+            let targetCategoryIds: number[] = [];
+            if (selectedCategories.length > 0) {
+              if (target === activeSiteId) {
+                targetCategoryIds = [...selectedCategories];
+              } else {
+                const selectedNames = availableCategories
+                  .filter(c => selectedCategories.includes(c.id))
+                  .map(c => c.name);
+                
+                try {
+                  const targetCats = await api.request<any[]>('/wp-json/wp/v2/categories?hide_empty=0&per_page=100', {}, target);
+                  for (const name of selectedNames) {
+                    const existing = targetCats.find((c: any) => c.name.toLowerCase() === name.toLowerCase());
+                    if (existing) {
+                      targetCategoryIds.push(existing.id);
+                    } else {
+                      const newCat = await createCategory(name, target);
+                      targetCategoryIds.push(newCat.id);
+                    }
+                  }
+                } catch (catErr: any) {
+                  console.warn("Category mapping failed on target", catErr);
+                }
+              }
+            }
+
             const meta = {
               ...(focusKeyword ? { rank_math_focus_keyword: focusKeyword } : {}),
               ...(seoTitle ? { rank_math_title: seoTitle } : {}),
               ...(seoDescription ? { rank_math_description: seoDescription } : {})
             };
+            
             let post;
             if (editingPostId) {
               post = await updatePost(
@@ -241,7 +289,7 @@ export const PostsView: React.FC = () => {
                 newStatus,
                 mediaId,
                 Object.keys(meta).length > 0 ? meta : undefined,
-                selectedCategories,
+                targetCategoryIds.length > 0 ? targetCategoryIds : undefined,
                 target
               );
             } else {
@@ -251,7 +299,7 @@ export const PostsView: React.FC = () => {
                 newStatus, 
                 mediaId,
                 Object.keys(meta).length > 0 ? meta : undefined,
-                selectedCategories,
+                targetCategoryIds.length > 0 ? targetCategoryIds : undefined,
                 target
               );
             }
@@ -423,9 +471,26 @@ export const PostsView: React.FC = () => {
               <div className="absolute bottom-0 left-0 w-0 h-[1px] bg-primary transition-all duration-500 group-focus-within:w-full"></div>
             </div>
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-6">Nội dung Bài viết</label>
-              <div className="bg-white dark:bg-[#050505] text-gray-900 dark:text-white rounded-none border border-gray-200 dark:border-white/10 overflow-hidden [&_.ql-container]:min-h-[400px] [&_.ql-container]:text-base [&_.ql-editor]:min-h-[400px] [&_.ql-toolbar]:bg-[#FAF9F6] dark:[&_.ql-toolbar]:bg-[#080808] [&_.ql-toolbar]:border-b [&_.ql-toolbar]:border-gray-200 dark:[&_.ql-toolbar]:border-white/10 dark:[&_.ql-container]:border-transparent dark:[&_.ql-editor]:text-gray-200 focus-within:border-primary transition-colors">
-                <ReactQuill ref={quillRef} modules={modules} theme="snow" value={newContent} onChange={setNewContent} className="h-full" />
+              <div className="flex justify-between items-center mb-6">
+                <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Nội dung Bài viết</label>
+                <div className="flex border border-gray-200 dark:border-white/10 rounded-none overflow-hidden">
+                  <button type="button" onClick={() => setEditorMode('visual')} className={`px-4 py-1.5 text-[10px] uppercase font-bold tracking-widest transition-colors ${editorMode === 'visual' ? 'bg-primary text-black' : 'bg-transparent text-gray-500 hover:text-gray-900 dark:hover:text-white border-r border-gray-200 dark:border-white/10'}`}>Trực Quan</button>
+                  <button type="button" onClick={() => setEditorMode('code')} className={`px-4 py-1.5 text-[10px] uppercase font-bold tracking-widest transition-colors ${editorMode === 'code' ? 'bg-primary text-black' : 'bg-transparent text-gray-500 hover:text-gray-900 dark:hover:text-white'}`}>Mã Mã Hoá / Raw</button>
+                </div>
+              </div>
+              <div className="bg-white dark:bg-[#050505] text-gray-900 dark:text-white rounded-none border border-gray-200 dark:border-white/10 overflow-hidden min-h-[400px] flex flex-col focus-within:border-primary transition-colors">
+                {editorMode === 'visual' ? (
+                  <div className="flex-1 [&_.ql-container]:min-h-[400px] [&_.ql-container]:text-base [&_.ql-editor]:min-h-[400px] [&_.ql-toolbar]:bg-[#FAF9F6] dark:[&_.ql-toolbar]:bg-[#080808] [&_.ql-toolbar]:border-b [&_.ql-toolbar]:border-gray-200 dark:[&_.ql-toolbar]:border-white/10 dark:[&_.ql-container]:border-transparent dark:[&_.ql-editor]:text-gray-200">
+                    <ReactQuill ref={quillRef} modules={modules} theme="snow" value={newContent} onChange={setNewContent} className="h-full" />
+                  </div>
+                ) : (
+                  <textarea 
+                    value={newContent} 
+                    onChange={e => setNewContent(e.target.value)} 
+                    className="w-full flex-1 min-h-[400px] p-6 bg-[#FAF9F6] dark:bg-[#0A0A0A] text-sm font-mono text-gray-800 dark:text-gray-300 outline-none resize-none leading-relaxed"
+                    placeholder="Nhập mã HTML, CSS hoặc Script thuần vào đây..."
+                  />
+                )}
               </div>
             </div>
 
@@ -477,7 +542,27 @@ export const PostsView: React.FC = () => {
 
             {/* Categories Selection */}
             <div className="pt-8 border-t border-gray-100 dark:border-white/10">
-              <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-6">Danh mục Phân loại</label>
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+                <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Danh mục Phân loại</label>
+                <div className="flex items-center">
+                  <input 
+                    type="text" 
+                    value={newCategoryName}
+                    onChange={(e) => setNewCategoryName(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleCreateCategory())}
+                    placeholder="Tên danh mục mới..." 
+                    className="text-xs px-3 py-2 border border-gray-200 dark:border-white/10 border-r-0 bg-transparent text-gray-900 dark:text-white outline-none focus:border-primary w-40 sm:w-48"
+                  />
+                  <button 
+                    type="button" 
+                    onClick={handleCreateCategory}
+                    disabled={isCreatingCategory || !newCategoryName.trim()}
+                    className="px-4 py-2 bg-primary text-black text-xs font-bold uppercase tracking-wider hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-colors disabled:opacity-50 border border-primary"
+                  >
+                    {isCreatingCategory ? 'Đợi' : '+ Thêm'}
+                  </button>
+                </div>
+              </div>
               {availableCategories.length > 0 ? (
                 <div className="flex flex-wrap gap-3">
                   {availableCategories.map(cat => (

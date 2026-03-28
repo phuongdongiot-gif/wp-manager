@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { getProducts, createProduct, updateProduct, deleteProduct, getCategories } from '../services/woocommerce';
+import { getProducts, createProduct, updateProduct, deleteProduct, getCategories, createCategory } from '../services/woocommerce';
 import { api } from '../services/api';
 import { WCProduct, WCCategory } from '../types/wordpress';
 import { Loader2, Plus, Edit, Trash2, ExternalLink, Globe, DownloadCloud } from 'lucide-react';
@@ -25,6 +25,8 @@ export const ProductsView: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
   const [showCrawler, setShowCrawler] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [isCreatingCategory, setIsCreatingCategory] = useState(false);
 
   const [editingProductId, setEditingProductId] = useState<number | null>(null);
   const [newName, setNewName] = useState('');
@@ -36,6 +38,7 @@ export const ProductsView: React.FC = () => {
   const [selectedCategories, setSelectedCategories] = useState<number[]>([]);
   const [featuredImage, setFeaturedImage] = useState<File | null>(null);
   const [featuredImagePreview, setFeaturedImagePreview] = useState<string>('');
+  const [editorMode, setEditorMode] = useState<'visual' | 'code'>('visual');
   
   const [newStatus, setNewStatus] = useState<'publish' | 'draft'>('publish');
   const [pushMode, setPushMode] = useState<'saved' | 'quick'>('saved');
@@ -86,6 +89,22 @@ export const ProductsView: React.FC = () => {
       toast.error(msg, { id: 'wc-load-error', duration: 5000 });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleCreateCategory = async () => {
+    if (!newCategoryName.trim() || !activeSite) return;
+    setIsCreatingCategory(true);
+    try {
+      const newCat = await createCategory(activeSite, newCategoryName.trim());
+      setAvailableCategories(prev => [...prev, newCat]);
+      setSelectedCategories(prev => [...prev, newCat.id]);
+      setNewCategoryName('');
+      toast.success(`Đã tạo phân khúc "${newCat.name}"`);
+    } catch (err: any) {
+      toast.error('Lỗi tạo phân khúc: ' + err.message);
+    } finally {
+      setIsCreatingCategory(false);
     }
   };
 
@@ -198,6 +217,39 @@ export const ProductsView: React.FC = () => {
 
         for (const site of targetSites) {
           const sitePayload = { ...payload };
+          
+          let targetCategoryIds: number[] = [];
+          if (selectedCategories.length > 0) {
+            if (site.id === activeSite.id) {
+              targetCategoryIds = [...selectedCategories];
+            } else {
+              const selectedNames = availableCategories
+                .filter(c => selectedCategories.includes(c.id))
+                .map(c => c.name);
+                
+              try {
+                const targetCats = await getCategories(site);
+                for (const name of selectedNames) {
+                  const existing = targetCats.find((c: any) => c.name.toLowerCase() === name.toLowerCase());
+                  if (existing) {
+                    targetCategoryIds.push(existing.id);
+                  } else {
+                    const newCat = await createCategory(site, name);
+                    targetCategoryIds.push(newCat.id);
+                  }
+                }
+              } catch (catErr: any) {
+                console.warn("Category mapping failed on WooCommerce target site", catErr);
+              }
+            }
+          }
+          
+          if (targetCategoryIds.length > 0) {
+             sitePayload.categories = targetCategoryIds.map(id => ({ id } as any));
+          } else {
+             delete sitePayload.categories;
+          }
+
           if (featuredImage) {
             try {
               const media = await api.uploadMedia(featuredImage, site);
@@ -361,9 +413,26 @@ export const ProductsView: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-6">Mô tả Chi tiết (Description)</label>
-              <div className="bg-white dark:bg-[#050505] text-gray-900 dark:text-white rounded-none border border-gray-200 dark:border-white/10 overflow-hidden [&_.ql-container]:min-h-[300px] [&_.ql-container]:text-base [&_.ql-editor]:min-h-[300px] [&_.ql-toolbar]:bg-[#FAF9F6] dark:[&_.ql-toolbar]:bg-[#080808] [&_.ql-toolbar]:border-b [&_.ql-toolbar]:border-gray-200 dark:[&_.ql-toolbar]:border-white/10 dark:[&_.ql-container]:border-transparent dark:[&_.ql-editor]:text-gray-200 focus-within:border-primary transition-colors">
-                <ReactQuill ref={quillRef} modules={modules} theme="snow" value={newDescription} onChange={setNewDescription} className="h-full" />
+              <div className="flex justify-between items-center mb-6">
+                <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Mô tả Chi tiết (Description)</label>
+                <div className="flex border border-gray-200 dark:border-white/10 rounded-none overflow-hidden">
+                  <button type="button" onClick={() => setEditorMode('visual')} className={`px-4 py-1.5 text-[10px] uppercase font-bold tracking-widest transition-colors ${editorMode === 'visual' ? 'bg-primary text-black' : 'bg-transparent text-gray-500 hover:text-gray-900 dark:hover:text-white border-r border-gray-200 dark:border-white/10'}`}>Trực Quan</button>
+                  <button type="button" onClick={() => setEditorMode('code')} className={`px-4 py-1.5 text-[10px] uppercase font-bold tracking-widest transition-colors ${editorMode === 'code' ? 'bg-primary text-black' : 'bg-transparent text-gray-500 hover:text-gray-900 dark:hover:text-white'}`}>Mã Hoá Hoá / Raw</button>
+                </div>
+              </div>
+              <div className="bg-white dark:bg-[#050505] text-gray-900 dark:text-white rounded-none border border-gray-200 dark:border-white/10 overflow-hidden min-h-[300px] flex flex-col focus-within:border-primary transition-colors">
+                {editorMode === 'visual' ? (
+                  <div className="flex-1 [&_.ql-container]:min-h-[300px] [&_.ql-container]:text-base [&_.ql-editor]:min-h-[300px] [&_.ql-toolbar]:bg-[#FAF9F6] dark:[&_.ql-toolbar]:bg-[#080808] [&_.ql-toolbar]:border-b [&_.ql-toolbar]:border-gray-200 dark:[&_.ql-toolbar]:border-white/10 dark:[&_.ql-container]:border-transparent dark:[&_.ql-editor]:text-gray-200">
+                    <ReactQuill ref={quillRef} modules={modules} theme="snow" value={newDescription} onChange={setNewDescription} className="h-full" />
+                  </div>
+                ) : (
+                  <textarea 
+                    value={newDescription} 
+                    onChange={e => setNewDescription(e.target.value)} 
+                    className="w-full flex-1 min-h-[300px] p-6 bg-[#FAF9F6] dark:bg-[#0A0A0A] text-sm font-mono text-gray-800 dark:text-gray-300 outline-none resize-none leading-relaxed"
+                    placeholder="Nhập mã HTML, CSS hoặc Script thuần vào đây..."
+                  />
+                )}
               </div>
             </div>
 
@@ -417,7 +486,27 @@ export const ProductsView: React.FC = () => {
             </div>
 
             <div className="pt-8 border-t border-gray-100 dark:border-white/10">
-              <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-6">Phân khúc Hàng Hoá (Categories)</label>
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+                <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">Phân khúc Hàng Hoá (Categories)</label>
+                <div className="flex items-center">
+                  <input 
+                    type="text" 
+                    value={newCategoryName}
+                    onChange={(e) => setNewCategoryName(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleCreateCategory())}
+                    placeholder="Tên phân khúc mới..." 
+                    className="text-xs px-3 py-2 border border-gray-200 dark:border-white/10 border-r-0 bg-transparent text-gray-900 dark:text-white outline-none focus:border-primary w-40 sm:w-48"
+                  />
+                  <button 
+                    type="button" 
+                    onClick={handleCreateCategory}
+                    disabled={isCreatingCategory || !newCategoryName.trim()}
+                    className="px-4 py-2 bg-primary text-black text-xs font-bold uppercase tracking-wider hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-colors disabled:opacity-50 border border-primary"
+                  >
+                    {isCreatingCategory ? 'Đợi' : '+ Thêm'}
+                  </button>
+                </div>
+              </div>
               {availableCategories.length > 0 ? (
                 <div className="flex flex-wrap gap-3">
                   {availableCategories.map(cat => (

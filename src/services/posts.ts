@@ -84,3 +84,11 @@ export const deletePost = async (id: number, siteId?: string): Promise<boolean> 
   }, siteId);
   return true;
 };
+
+export const createCategory = async (name: string, targetConfig?: string | SiteCredential): Promise<{id: number, name: string}> => {
+  const payload = { name };
+  return await api.request<{id: number, name: string}>('/wp-json/wp/v2/categories', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  }, targetConfig);
+};
